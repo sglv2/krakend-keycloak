@@ -14,3 +14,8 @@ KEYCLOAK_PASSWORD=s0mepwd \
 KEYCLOAK_INGRESS_HOSTNAME=keycloak.example.com \
 ./k8s-setup.sh
 ```
+
+# Original values
+```
+helm show values --version 7.2.1 codecentric/keycloak > helm/keycloak/original-values.yaml
+```
