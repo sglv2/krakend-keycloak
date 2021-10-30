@@ -47,8 +47,7 @@ kubectl run pg-postgresql-client --rm --tty -i --restart='Never' \
     --command -- psql --host pg-postgresql -U postgres -d postgres -p 5432 -c 'CREATE DATABASE keycloak'
 
 
-helm upgrade \
-  --install \
+helm upgrade -i \
   --reset-values \
   --namespace default  \
   --values helm/keycloak/values.yaml \
@@ -57,11 +56,10 @@ helm upgrade \
 
 wait_for_keycloak
 
-# kubectl exec -it keycloak-0 -- \
-#    /opt/jboss/keycloak/bin/kcadm.sh config credentials \
-#    --server http://localhost:8080/auth \
-#    --realm master \
-#    --user keycloak \
-#    --password=${KEYCLOAK_PASSWORD}
-# kubectl exec -it keycloak-0 -- \
-#    keycloak/bin/kcadm.sh update realms/master -s "sslRequired=none"
+export ORIGINAL_DIR=$(pwd)
+pushd /tmp/
+if [[ ! -d krakend-helm ]];then
+  git clone https://github.com/sglv2/krakend-helm.git
+fi
+
+helm upgrade -i kd krakend-helm -f ${ORIGINAL_DIR}/helm/krakend-helm/values.yaml
