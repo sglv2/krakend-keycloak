@@ -1,61 +1,55 @@
 #!/bin/bash
+export KEYCLOAK_DOMAIN=1.2.3.4.nip.io
+export KEYCLOAK_PASSWORD=keycl0ak
+export KEYCLOAK_DB_PASSWORD=keycl0ak
 
-secret_exists() {
-    kubectl get secrets --field-selector=metadata.name=$1 --no-headers 2>/dev/null | wc -l
-}
+# export STORAGE_CLASS=demo-hostpath
+# kubectl apply -f demo-persistence.yaml
 
-wait_for_postgres() {
-    PG_READY_CMD="kubectl get pod pg-postgresql-0 -o jsonpath='{.status.containerStatuses[0].ready}'"
-    echo "Postgres is initializing"
-    while [[ $(${PG_READY_CMD} | grep -c true) -lt 1 ]];do
-        sleep 5
-        echo "....."
-    done
-}
+cat <<EOF > keycloak-values.yaml
+keycloak:
+  ingress:
+    enabled: true
+    annotations:      
+      kubernetes.io/ingress.class: nginx
+      kubernetes.io/tls-acme: "true"    
+      ingress.kubernetes.io/affinity: cookie
+    hosts:
+    - ${KEYCLOAK_DOMAIN}
+    path: /auth
+  username: keycloak
+  password: ${KEYCLOAK_PASSWORD}
+  persistence:    
+    deployPostgres: true
+    dbVendor: postgres
+    dbPassword: ${KEYCLOAK_DB_PASSWORD}
+postgresql:
+  persistence:
+    enabled: true
+    storageClass: ${STORAGE_CLASS}
+  postgresPassword: ${KEYCLOAK_DB_PASSWORD}
+EOF
 
-if [[ -z "${KEYCLOAK_DB_PASSWORD}" ]]; then
-    KEYCLOAK_DB_PASSWORD="keycl0ak"
-fi
+helm upgrade \
+  --install \
+  --reset-values \
+  --namespace default  \
+  --values keycloak-values.yaml \
+  --version 7.2.1 \
+  keycloak codecentric/keycloak
 
-if [[ -z "${KEYCLOAK_INGRESS_HOSTNAME}" ]]; then
-    KEYCLOAK_INGRESS_HOSTNAME="keycloak.local"
-fi
+KEYCLOAK_READY_CMD="kubectl get pod keycloak-0 -o jsonpath='{.status.containerStatuses[0].ready}'"
+echo "Keycloak is initializing"
+while [[ $(${KEYCLOAK_READY_CMD} | grep -c true) -lt 1 ]];do
+    sleep 5
+    echo "....."
+done
 
-set -u
-
-echo "KEYCLOAK_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD}"
-echo "KEYCLOAK_INGRESS_HOSTNAME=${KEYCLOAK_INGRESS_HOSTNAME}"
-
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm repo add nginx-stable https://helm.nginx.com/stable
-helm repo update
-
-# postgres
-if [[ $(secret_exists postgres) -eq 0 ]]; then
-    kubectl create secret generic postgres \
-    --from-literal=postgresql-password=${KEYCLOAK_DB_PASSWORD}
-fi
-
-set -e
-helm upgrade -i pg bitnami/postgresql \
-    --version 10.3.18 \
-    --values helm/postgres/values.yaml
-set +e
-
-## Create the wiki database
-
-wait_for_postgres
-
-set -e
-kubectl run pg-postgresql-client --rm --tty -i --restart='Never' \
-    --namespace default \
-    --image docker.io/bitnami/postgresql:11.11.0-debian-10-r71 \
-    --env="PGPASSWORD=${KEYCLOAK_DB_PASSWORD}" \
-    --command -- psql --host pg-postgresql -U postgres -d postgres -p 5432 -c 'CREATE DATABASE keycloak'
-
-# nginx-ingress
-helm upgrade -i ni nginx-stable/nginx-ingress \
-  --version 0.9.1 \
-  --values helm/nginx-ingress/values.yaml
-
-set -e
+kubectl exec -it keycloak-0 -- \
+   keycloak/bin/kcadm.sh config credentials \
+   --server http://localhost:8080/auth \
+   --realm master \
+   --user keycloak \
+   --password=${KEYCLOAK_PASSWORD}
+kubectl exec -it keycloak-0 -- \
+   keycloak/bin/kcadm.sh update realms/master -s "sslRequired=none"

@@ -1,0 +1,22 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: demo-hostpath             
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: Immediate
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: demo-pv
+  labels:
+    type: local
+spec:
+  storageClassName: demo-hostpath
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/tmp/hostpath"
+

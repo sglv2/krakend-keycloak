@@ -1,0 +1,21 @@
+keycloak:
+  ingress:
+    enabled: true
+    annotations:      
+      kubernetes.io/ingress.class: nginx
+      kubernetes.io/tls-acme: "true"    
+      ingress.kubernetes.io/affinity: cookie
+    hosts:
+    - 1.2.3.4.nip.io
+    path: /auth
+  username: keycloak
+  password: keycl0ak
+  persistence:    
+    deployPostgres: true
+    dbVendor: postgres
+    dbPassword: keycl0ak
+postgresql:
+  persistence:
+    enabled: true
+    storageClass: 
+  postgresPassword: keycl0ak
