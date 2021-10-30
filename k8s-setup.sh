@@ -57,11 +57,11 @@ helm upgrade \
 
 wait_for_keycloak
 
-kubectl exec -it keycloak-0 -- \
-   keycloak/bin/kcadm.sh config credentials \
-   --server http://localhost:8080/auth \
-   --realm master \
-   --user keycloak \
-   --password=${KEYCLOAK_PASSWORD}
-kubectl exec -it keycloak-0 -- \
-   keycloak/bin/kcadm.sh update realms/master -s "sslRequired=none"
+# kubectl exec -it keycloak-0 -- \
+#    /opt/jboss/keycloak/bin/kcadm.sh config credentials \
+#    --server http://localhost:8080/auth \
+#    --realm master \
+#    --user keycloak \
+#    --password=${KEYCLOAK_PASSWORD}
+# kubectl exec -it keycloak-0 -- \
+#    keycloak/bin/kcadm.sh update realms/master -s "sslRequired=none"

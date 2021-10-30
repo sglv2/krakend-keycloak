@@ -85,7 +85,7 @@ keycloak:
 
   ## Password for the initial Keycloak admin user. Applicable only if existingSecret is not set.
   ## If not set, a random 10 characters password will be used
-  password: ""
+  password: "keycl0ak"
 
   # Specifies an existing secret to be used for the admin password
   existingSecret: ""
